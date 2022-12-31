@@ -85,6 +85,8 @@ library(lubridate)
 library(plotly)
 library(knitr)
 library(reshape2)
+library(gridExtra)
+library(ggpubr)
 ```
 
 #### 2.4 Importing datasets into R
@@ -265,7 +267,6 @@ ggplot(data = merged_data, aes(x = TotalMinutesAsleep, y = TotalSteps)) +
                                   size = 16),
                                   axis.title = element_text(size = 12),
         axis.text = element_text(size = 10))
-
 ```
 
 
@@ -276,8 +277,13 @@ Based on the results of the linear regression analysis, there does not appear to
 
 
 ```{r}
- daily_activity <- daily_activity %>%
- mutate(day_of_week = wday(ActivityDate, label = TRUE))
+daily_activity <- daily_activity %>%
+  mutate(day_of_week = wday(ActivityDate, label = TRUE))
+
+# Reorder the days of the week so that Monday is first
+daily_activity <- daily_activity %>%
+  mutate(day_of_week = fct_relevel(day_of_week, "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"))
+
 daily_activity_by_day <- daily_activity %>%
   group_by(day_of_week)
 daily_activity_by_day <- daily_activity_by_day %>%
@@ -303,22 +309,22 @@ kable(daily_activity_by_day,
   caption = "Average number of steps per day",
   align = c("l", "r"),
   col.names = c("Day of the week", "Mean steps"))
-
 ```
+
 From the data, it appears that there is a general trend of higher mean steps on weekdays compared to weekends. On average, users take around 8,000 steps on weekdays, while on weekends this number decreases to around 7,000 steps. The highest mean steps are on Saturdays, while the lowest mean steps are on Sundays. It is worth noting that the difference between the mean steps on weekdays and weekends is not very large, with a difference of only about 1,000 steps.
 
 ```{r}
 # Create data frame with day of the week, sedentary minutes, active minutes, and other activity categories
-activity_data <- data.frame(day_of_week = c("Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"),
+try(activity_data <- data.frame(day_of_week = c("Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"),
                             sedentary_minutes = c(734, 766, 1217, 727, 773, 539, 1149),
                                active_minutes = c(328, 217, 181, 209, 221, 164, 233),
-                            other_activity = c(13 + 25, 19 + 21, 11 + 30, 34 + 29, 10 + 36, 20 + 38, 16 + 42))
+                            other_activity = c(13 + 25, 19 + 21, 11 + 30, 34 + 29, 10 + 36, 20 + 38, 16 + 42)))
 
 # Melt data frame so that each activity category is a separate column
-activity_data_melt <- melt(activity_data, id.vars = "day_of_week")
+try(activity_data_melt <- melt(activity_data, id.vars = "day_of_week"))
 
 # Create stacked bar chart
-ggplot(data = activity_data_melt, aes(x = day_of_week, y = value, fill = variable)) +
+try(ggplot(data = activity_data_melt, aes(x = day_of_week, y = value, fill = variable)) +
   geom_bar(stat = "identity") +
   xlab("Day of the week") +
   ylab("Minutes") +
@@ -329,23 +335,32 @@ ggplot(data = activity_data_melt, aes(x = day_of_week, y = value, fill = variabl
                                   margin = margin(10, 0, 10, 0),
                                   size = 16),
                                   axis.title = element_text(size = 12),
-        axis.text = element_text(size = 10))
+        axis.text = element_text(size = 10)))
 
 kable(activity_data, align = "c")
 ```
-Based on the data, it appears that the mean number of sedentary minutes, active minutes, and other activity varies by day of the week. On average, Tuesday has the highest amount of sedentary minutes and Friday has the lowest amount of active minutes, while Sunday has the highest amount of active minutes and the lowest amount of sedentary minutes. This is surprising as active minutes tend to peak when overall step avrage is lower meaning there is a population of users who are more active when the majority of users are not very active. The amount of other activity, which includes activities such as very active minutes and moderately active minutes, is generally consistent throughout the week, with slight variations on certain days. 
+
+
+Based on the data, it appears that the mean number of numbers spent on activities varies by day of the week. On average, Tuesday has the highest amount of sedentary minutes and Friday has the lowest amount of active minutes, while Sunday has the highest amount of active minutes and the lowest amount of sedentary minutes. This is surprising as active minutes tend to peak when overall step avrage is lower meaning there is a population of users who are more active when the majority of users are not very active. The amount of other activity, which includes activities such as very active minutes and moderately active minutes, is generally consistent throughout the week, with slight variations on certain days. 
 
 It is worth noting that the data does not include information on the total number of minutes spent on each activity category, only the mean number of minutes per day. It would be interesting to see if there are any trends or patterns in the total minutes spent on each activity category throughout the week.
 
-```{r eval=FALSE}
-ggplot(data = activity_counts, aes(x = LoggedActivitiesType, y = n, fill = LoggedActivitiesType)) +
+```{r}
+print(total_sleep_records <- sum(sleep_day_unique$TotalSleepRecords))
+print(activity_counts <- nrow(daily_activity))
+print(total_weight_logs <- weight_log %>%
+  count())
+
+activity_counts <- data.frame(ActivityType = c("Sleep", "Exercise", "Weight"),
+                              Count = c(459, 940, 67))
+
+ggplot(data = activity_counts, aes(x = ActivityType, y = Count, fill = ActivityType)) +
   geom_bar(stat = "identity") +
+  geom_text(aes(label = Count), position = "stack") +
   labs(title = "Types of activities logged",
-       subtitle = "Logging weight is unpopular",
-       caption = "Data: FitBit",
        x = "Activity type",
        y = "Count") +
-  coord_flip() +
+   coord_flip() +
   scale_fill_manual(values = c("#0072B2", "#D55E00", "#CC79A7")) +
   theme(plot.title = element_text(face = "bold",
                                   margin = margin(10, 0, 10, 0),
@@ -355,9 +370,12 @@ ggplot(data = activity_counts, aes(x = LoggedActivitiesType, y = n, fill = Logge
         legend.title = element_text(size = 12, color = "chocolate", face = 2),
         legend.text = element_text(size = 10),
         axis.title = element_text(size = 12),
-        axis.text = element_text(size = 10)) +
+        axis.text = element_text(size = 10),
+        legend.position = "none") +
   scale_color_discrete("Activity Type:") +
   guides(color = guide_legend(override.aes = list(size = 6)))
+
+print(percent_weight_logs <- (67 / 1466) * 100)
 ```
 It appears that there is a trend of low logging of weight activities compared to other types of activities. This could potentially be seen as a gap in the market for BellaBeat, as weight is a important aspect of health and wellness. If BellaBeat were able to find a way to make it easier or more appealing for its users to log their weight, it could potentially improve sales and customer satisfaction. 
 
@@ -396,11 +414,11 @@ print(percent_below_10000 <- avg_steps_by_user %>%
 
 ```
 
+There is 79% of users falling belwo this threshold.
 
 Perhaps there is a difference in the day of the week that they are more more active. let us explore how Total Steps by day measures up to the 10,000 principal.
 
-```{r eval=FALSE}
-
+```{r}
 daily_activity <- daily_activity %>%
   mutate(day_of_week = wday(ActivityDate, label = TRUE))
 
@@ -411,7 +429,6 @@ ggplot(data = daily_activity, aes(x = day_of_week, y = TotalSteps, fill = day_of
   ylab("Total steps") +
   ggtitle("Total steps by day of the week") +
   scale_fill_manual(values = c("#0000FF", "#0000FF", "#0000FF", "#0000FF", "#0000FF", "#FF0000", "#FF0000"))
-
 ```
 
 **Conclusion:**
