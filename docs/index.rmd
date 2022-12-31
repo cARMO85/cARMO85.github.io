@@ -1,0 +1,449 @@
+---
+title: "Bellabeat Data Analytics Case study"
+output:
+  html_document:
+    toc: true
+    toc_depth: 3
+    toc_float: true
+    theme: united
+    author: Paul Carmody
+---
+
+
+## Introduction
+Bellabeat is a small tech company that has high hopes of becoming a more successful company. They have several smart products aimed exclusively at women, including a wellness tracker (Leaf), a smartwatch (Time), a smart bottle (Spring), and a smart wellness app (BellaBeat app).
+
+## 1. Ask
+
+**Business Task**
+As a part of their business strategy, Bellabeat has tasked their marketing analytics team with conducting open source data analysis on other well-being smart devices in order to gain insights and apply them to the company's goals for future growth. The stakeholders of Bellabeat hope that these insights will be used to inform future marketing decisions and shape the direction of the company in order to capture a larger share of the market.
+
+To guide their research, the marketing analytics team has identified three key questions:
+
+1. What are some trends in smart device usage?
+2. How could these trends apply to Bellabeat customers?
+3. How could these trends help influence Bellabeat's marketing strategy?
+
+#### 1.1 Key Stakeholders:
+
+· **Urška Sršen** — Bellabeat’s cofounder and Chief Creative Officer
+
+· **Sando Mur** — Mathematician and Bellabeat’s cofounder; key member of the Bellabeat executive team
+
+· **Bellabeat marketing analytics team** — A team of data analysts responsible for collecting, analyzing, and reporting data that helps guide Bellabeat’s marketing strategy.
+
+
+## 2 Prepare
+
+#### 2.1 introduction to the data used
+For this project, we will be using open source data from the FitBit Fitness Tracker Data set available on Kaggle (CC0: Public Domain, dataset made available through Mobius). This dataset contains personal fitness tracker data from thirty Fitbit users who consented to the submission of their minute-level output for physical activity, heart rate, and sleep monitoring. It includes information about daily activity, steps, and heart rate that can be used to explore users' habits.
+
+Before using this data, it is important that we conduct a full check on its reliability and validity through a ROCCC analysis. It is worth noting that this dataset has **a small sample size**, so caution should be taken when drawing strong conclusions from the data. The data is stored in a **safe location** and is in **wide format**.
+
+Since Sršen is looking to gain insights form other data, we will be using [ FitBit Fitness Tracker Data](http://https://www.kaggle.com/datasets/arashnic/fitbit) 
+
+(CC0: Public Domain, dataset made available through [Mobius](http://https://www.kaggle.com/arashnic)
+
+
+#### 2.2 Fitbit Tracker Data ROCCC Analysis
+In order to assess the reliability and suitability of the Fitbit Fitness Tracker data for our analysis, we will conduct a ROCCC analysis. This analysis includes the following factors:
+
+<p><strong>Reliability</strong> Low. The dataset includes data from only 30 participants, which could potentially introduce a sample size bias. 
+
+<strong>Originality</strong> Low. This dataset was generated through a distributed survey conducted by Amazon Mechanical Turk in 2016, and the results must be taken with caution as it is a third-party data source. 
+
+<strong>Comprehensiveness</strong> Medium. While the dataset includes a variety of information about daily activity, steps, and heart rate, the sample size of 30 participants is not representative of a larger population. Additionally, the dataset does not specify the gender or age of the participants, which limits our ability to draw specific conclusions about Bellabeat's customer base. It also does not include information about hydration or water intake, which means we cannot focus on the smart water bottle product. Some of the datasets also have less than 30 participants, which could potentially impact the validity of the data. 
+
+<strong>Current</strong> Low. The dataset is based on historical data from 2016, so it is possible that trends have changed in the past six years. 
+
+<strong>Cited</strong> High The dataset was created by four authors: Furberg Robert, Brinton Julia, Keating Michael, and Ortiz Alexa, and it is well-documented and correctly cited.</p>
+#### 2.3 Exploring the datasets
+After initial exploration of the datasets, I have identified 18 csv files.
+![Alt text](https://image-url){width=150% height=150%}
+
+
+
+
+For this study, I will focus on the following files that contain daily data:
+* dailyActivity_merged.csv
+* dailyIntensities_merged.csv
+* dailySteps_merged.csv
+* sleepDay_merged.csv
+* weightLogInfo_merged.csv
+
+
+I will drop any data or files that are not useful for my analysis.
+
+#### 2.4 Installing libraries
+```{r, echo=FALSE}
+##Adding relevant libraries
+library(tidyverse)
+library(skimr)
+library(dplyr)
+library(ggplot2)
+library(lubridate)
+library(plotly)
+library(knitr)
+library(reshape2)
+```
+
+#### 2.4 Importing datasets into R
+```{R}
+daily_activity <- read.csv("/Users/paul/Downloads/dailyActivity_merged.csv")
+daily_steps <- read.csv("/Users/paul/Downloads/dailySteps_merged.csv")
+daily_inten <- read.csv("/Users/paul/Downloads/dailyIntensities_merged.csv")
+sleep_day <- read.csv("/Users/paul/Downloads/sleepDay_merged.csv")
+weight_log <- read.csv("/Users/paul/Downloads/weightLogInfo_merged.csv")
+```
+
+## 3 Process
+
+
+#### 3.1 Viewing the datasets
+Before we begin our analysis, it is important to take a quick look at the data to check for any abnormalities. I have manually checked the csv files with Excel and made minor amendments to them, including splitting the time and date and reformatting columns as either date or string.
+
+```{r}
+head(sleep_day, 3)
+head(daily_activity,3 )
+head(daily_steps, 3)
+head(weight_log, 3)
+head(daily_inten, 3)
+```
+
+
+
+#### 3.2 Checking the population samples of each dataset for validity
+
+
+Here we count the unique users to make sure they roughly equate to the toal number of participants.
+
+
+```{r}
+count(sleep_day,c(Id)) ## [24]
+count(daily_activity,c(Id)) ## [33]
+count(daily_steps,c(Id)) ## [33]
+count(weight_log,c(Id)) ## [8]
+count(daily_inten,c(Id)) ## [33]
+```
+
+
+The "Weight_log" dataset has only 8 participants and is therefore too small to be used in our project. As a result, it will be excluded from our analysis. The "Sleep_day" dataset also has a small sample size with only 24 participants, but we will keep it in the analysis for practice purposes. It is important to note that a sample size of 30 is generally considered the minimum statistical sample size, so caution should be taken when drawing conclusions from datasets with smaller sample sizes.
+
+
+#### 3.3 Data cleaning
+
+I then used the *"Glimpse"* function to quickly see how much data I had and what was needed or not. From the results, some data within the individual datasets will be dropped.
+
+
+```{r}
+glimpse(sleep_day)
+glimpse(daily_activity)
+glimpse(daily_steps)
+glimpse(daily_inten)
+```
+
+#### 3.4 Check for duplicates
+
+```{r}
+any(duplicated(sleep_day))
+any(duplicated(daily_activity))
+any(duplicated(daily_steps))
+any(duplicated(daily_inten))
+```
+
+
+Remove duplicates from sleep_day
+
+
+
+```{r}
+sleep_day_unique <- unique(sleep_day)
+```
+
+
+#### 3.5 Converting date foramts
+```{r}
+daily_activity$ActivityDate <- as.Date(daily_activity$ActivityDate, format = "%m/%d/%Y")
+sleep_day_unique$SleepDay <- as.Date(sleep_day_unique$SleepDay, format = "%m/%d/%Y %I:%M:%S %p")
+daily_steps$ActivityDay <- as.Date(daily_steps$ActivityDay, format = "%m/%d/%Y")
+daily_inten$ActivityDay <- as.Date(daily_inten$ActivityDay, format = "%m/%d/%Y")
+
+str(daily_activity)
+str(sleep_day_unique)
+str(daily_steps)
+str(daily_inten)
+```
+
+
+## 4. Analyze
+
+
+To begin with, I will state my hypothesis that I will explore:
+
+1. Total calories burned and total distance covered are positivily correlated
+
+2. Sleep has a stromng relationship with activity
+
+3. There are note-worthy patterns in the times of users activities
+
+4. Users regularly do not reach 10,000 daily steps (recommended average for adults acoording to the American Heart Association)
+
+
+#### 4.1 Total steps ≈ total distance
+The total distance and steps should be the same so I will test this first before assuming.
+```{r}
+ggplot(data = daily_activity, theme = theme_minimal()) +
+  geom_point(mapping = aes(x = TotalDistance, y = TotalSteps, color='dark green')) +
+  geom_smooth(mapping = aes(x = TotalDistance, y = TotalSteps)) +
+  labs(title="Total distance and Total steps are positively correlated", xlab="Total distance (km)", ylab="Total steps") +
+  scale_color_discrete(name="Variables", guide = "none") +
+  theme(plot.title = element_text(size = 20, hjust = 0.5))+
+  theme(plot.title = element_text(face = "bold",
+                                  margin = margin(10, 0, 10, 0),
+                                  size = 16),
+                                  axis.title = element_text(size = 12),
+        axis.text = element_text(size = 10))
+                                  
+```
+```{r}
+#Again assuming greater distance leads to greater calories burnt
+ggplot(data = daily_activity, theme = theme_minimal()) +
+  geom_point(mapping = aes(x = TotalDistance, y = Calories), color='dark green') +
+  geom_smooth(mapping = aes(x = TotalDistance, y = Calories), method = 'loess', formula = 'y ~ x') +
+  labs(title="Total distance vs. Total calories", xlab="Total distance (km)", ylab="Total calories") +
+  scale_color_discrete(name="Variables", guide = "none") +
+  theme(plot.title = element_text(size = 20, hjust = 0.5))+
+  theme(plot.title = element_text(face = "bold",
+                                  margin = margin(10, 0, 10, 0),
+                                  size = 16),
+                                  axis.title = element_text(size = 12),
+        axis.text = element_text(size = 10))
+```
+```{r}
+cor.test(daily_activity$TotalDistance, daily_activity$Calories)
+```
+A correlation of 0.6449619 suggests a moderate positive relationship between total distance and total calories. This means that as total distance increases, total calories tend to also increase. However, it is important to note that correlation does not necessarily imply causation, and other factors may be influencing the relationship between these variables.
+
+To further analyze the relationship between total distance and total calories, we will look at a linear regression analysis model.
+```{r}
+# Fit a linear regression model to predict total calories from total distance
+model <- lm(Calories ~ TotalDistance, data = daily_activity)
+
+# Print a summary of the model
+summary(model)
+
+# Create a residual plot
+plot(model)
+```
+
+Based on the results of the linear regression model, there is a statistically significant relationship between total distance and total calories burned. The model explains 41.6% of the variance in total calories burned. The coefficient for total distance is 118.022, indicating that for every additional kilometer traveled, there is an increase of 118.022 calories burned. This suggests that increasing physical activity, as measured by total distance traveled, is associated with an increase in total calories burned. However, it is important to note that this analysis only considers the relationship between these two variables and does not account for other factors that may influence total calories burned.
+
+
+
+#### 4.2 Investigate the correlation between sleep and activity
+
+
+As I would like to investigate the coorelation between activity and sleep, I will merge them into a new dataset using their unique key: 'Id'
+```{r}
+# Join daily_activity and sleep_day_unique by ActivityDate and SleepDay
+merged_data <- left_join(daily_activity, sleep_day_unique, by = c("ActivityDate" = "SleepDay"))
+
+# Fit a linear regression model to predict total steps from sleep duration
+model <- lm(TotalSteps ~ TotalMinutesAsleep, data = merged_data)
+
+# Print a summary of the model
+summary(model)
+
+# Create a scatterplot to visualize the relationship between sleep duration and total steps
+ggplot(data = merged_data, aes(x = TotalMinutesAsleep, y = TotalSteps)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  labs(title = "Sleep duration vs. Total steps", x = "Sleep duration (minutes)", y = "Total steps") +
+  theme(plot.title = element_text(size = 20, hjust = 0.5)) +
+  theme(plot.title = element_text(face = "bold",
+                                  margin = margin(10, 0, 10, 0),
+                                  size = 16),
+                                  axis.title = element_text(size = 12),
+        axis.text = element_text(size = 10))
+
+```
+
+
+Based on the results of the linear regression analysis, there does not appear to be a strong relationship between total steps and sleep duration. The p-value for the TotalMinutesAsleep predictor is 0.1826, which indicates that it is not statistically significant. This means that the observed relationship between total steps and sleep duration may be due to chance. The R-squared value of 0.0001417 also suggests that the model explains a very small amount of the variance in total steps. These results suggest that other factors may be more important in determining total steps. It is important to note that this analysis is based on a single linear regression model and that other models or methods of analysis may yield different results.
+
+
+#### 4.3 Investigate patterns of use within time frames: Average Steps by Day of the Week
+
+
+```{r}
+ daily_activity <- daily_activity %>%
+ mutate(day_of_week = wday(ActivityDate, label = TRUE))
+daily_activity_by_day <- daily_activity %>%
+  group_by(day_of_week)
+daily_activity_by_day <- daily_activity_by_day %>%
+  summarize(mean_steps = mean(TotalSteps))
+
+
+ggplot(data = daily_activity, aes(x = day_of_week, y = TotalSteps, fill = day_of_week)) +
+  geom_bar(stat = "identity") +
+  xlab("Day of the week") +
+  ylab("Mean steps") +
+  ggtitle("Mean steps by day of the week") +
+  scale_fill_manual(values = c("#0000FF", "#0000FF", "#0000FF", "#0000FF", "#0000FF", "#FF0000", "#FF0000")) +
+  theme(legend.position = "none")+
+  theme(plot.title = element_text(size = 20, hjust = 0.5)) +
+  theme(plot.title = element_text(face = "bold",
+                                  margin = margin(10, 0, 10, 0),
+                                  size = 16),
+                                  axis.title = element_text(size = 12),
+        axis.text = element_text(size = 10))
+
+# Use kable to create a table with the average number of steps per day
+kable(daily_activity_by_day,
+  caption = "Average number of steps per day",
+  align = c("l", "r"),
+  col.names = c("Day of the week", "Mean steps"))
+
+```
+From the data, it appears that there is a general trend of higher mean steps on weekdays compared to weekends. On average, users take around 8,000 steps on weekdays, while on weekends this number decreases to around 7,000 steps. The highest mean steps are on Saturdays, while the lowest mean steps are on Sundays. It is worth noting that the difference between the mean steps on weekdays and weekends is not very large, with a difference of only about 1,000 steps.
+
+```{r}
+# Create data frame with day of the week, sedentary minutes, active minutes, and other activity categories
+activity_data <- data.frame(day_of_week = c("Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"),
+                            sedentary_minutes = c(734, 766, 1217, 727, 773, 539, 1149),
+                               active_minutes = c(328, 217, 181, 209, 221, 164, 233),
+                            other_activity = c(13 + 25, 19 + 21, 11 + 30, 34 + 29, 10 + 36, 20 + 38, 16 + 42))
+
+# Melt data frame so that each activity category is a separate column
+activity_data_melt <- melt(activity_data, id.vars = "day_of_week")
+
+# Create stacked bar chart
+ggplot(data = activity_data_melt, aes(x = day_of_week, y = value, fill = variable)) +
+  geom_bar(stat = "identity") +
+  xlab("Day of the week") +
+  ylab("Minutes") +
+  ggtitle("Activity by day of the week") +
+  scale_fill_manual(values = c("#FF0000", "#0000FF", "#00FF00")) +
+  theme(plot.title = element_text(size = 20, hjust = 0.5)) +
+  theme(plot.title = element_text(face = "bold",
+                                  margin = margin(10, 0, 10, 0),
+                                  size = 16),
+                                  axis.title = element_text(size = 12),
+        axis.text = element_text(size = 10))
+
+kable(activity_data, align = "c")
+```
+Based on the data, it appears that the mean number of sedentary minutes, active minutes, and other activity varies by day of the week. On average, Tuesday has the highest amount of sedentary minutes and Friday has the lowest amount of active minutes, while Sunday has the highest amount of active minutes and the lowest amount of sedentary minutes. This is surprising as active minutes tend to peak when overall step avrage is lower meaning there is a population of users who are more active when the majority of users are not very active. The amount of other activity, which includes activities such as very active minutes and moderately active minutes, is generally consistent throughout the week, with slight variations on certain days. 
+
+It is worth noting that the data does not include information on the total number of minutes spent on each activity category, only the mean number of minutes per day. It would be interesting to see if there are any trends or patterns in the total minutes spent on each activity category throughout the week.
+
+```{r eval=FALSE}
+ggplot(data = activity_counts, aes(x = LoggedActivitiesType, y = n, fill = LoggedActivitiesType)) +
+  geom_bar(stat = "identity") +
+  labs(title = "Types of activities logged",
+       subtitle = "Logging weight is unpopular",
+       caption = "Data: FitBit",
+       x = "Activity type",
+       y = "Count") +
+  coord_flip() +
+  scale_fill_manual(values = c("#0072B2", "#D55E00", "#CC79A7")) +
+  theme(plot.title = element_text(face = "bold",
+                                  margin = margin(10, 0, 10, 0),
+                                  size = 16),
+        plot.subtitle = element_text(size = 12),
+        plot.caption = element_text(size = 10),
+        legend.title = element_text(size = 12, color = "chocolate", face = 2),
+        legend.text = element_text(size = 10),
+        axis.title = element_text(size = 12),
+        axis.text = element_text(size = 10)) +
+  scale_color_discrete("Activity Type:") +
+  guides(color = guide_legend(override.aes = list(size = 6)))
+```
+It appears that there is a trend of low logging of weight activities compared to other types of activities. This could potentially be seen as a gap in the market for BellaBeat, as weight is a important aspect of health and wellness. If BellaBeat were able to find a way to make it easier or more appealing for its users to log their weight, it could potentially improve sales and customer satisfaction. 
+
+Some potential strategies BellaBeat could consider could include providing incentives for logging weight, making the process of logging weight more seamless and user-friendly, or combining with other smart lifestyle brands such as those who sell smart weighing scales to sync with their devices.
+
+
+#### 4.5 Daily steps
+
+According to the [National Institute of Health](https://www.nhlbi.nih.gov/health-topics/physical-activity), the number of steps taken every day is more important than the intensity of the activity, and all adults should aim for 10,000 steps per day. As shown in the graph below, 79% of the users in the dataset do not reach this threshold. The number of steps taken also varies dramatically depending on the day of the week, with the fewest steps taken on Sunday and Monday.
+
+
+```{r}
+# Calculate the average total steps for each user
+avg_steps_by_user <- daily_activity %>%
+  group_by(Id) %>%
+  summarize(avg_steps = mean(TotalSteps))
+
+# Create the scatter plot
+ggplot(data = avg_steps_by_user, aes(x = Id, y = avg_steps, color = avg_steps)) +
+  geom_point(size=10) +
+  geom_hline(yintercept = 10000, linetype = "dashed") +
+  labs(title = "Average total steps by user", 
+       subtitle = "Most users are not getting the 10,000 daily steps.", 
+       x = "User ID", 
+       y = "Average total steps",
+       caption = "Data: FitBit") +
+  scale_color_gradient(low = "red", high = "green")
+```
+
+#### 4.6 Avg no. of users who do not get the required steps
+```{r}
+# Calculate the percentage of users who do not get 10000 steps
+print(percent_below_10000 <- avg_steps_by_user %>%
+  filter(avg_steps < 10000) %>%
+  nrow() / nrow(avg_steps_by_user) * 100)
+
+```
+
+
+Perhaps there is a difference in the day of the week that they are more more active. let us explore how Total Steps by day measures up to the 10,000 principal.
+
+```{r eval=FALSE}
+
+daily_activity <- daily_activity %>%
+  mutate(day_of_week = wday(ActivityDate, label = TRUE))
+
+ggplot(data = daily_activity, aes(x = day_of_week, y = TotalSteps, fill = day_of_week)) +
+  geom_bar(stat = "identity") +
+  theme(legend.position = "none") +
+  xlab("Day of the week") +
+  ylab("Total steps") +
+  ggtitle("Total steps by day of the week") +
+  scale_fill_manual(values = c("#0000FF", "#0000FF", "#0000FF", "#0000FF", "#0000FF", "#FF0000", "#FF0000"))
+
+```
+
+**Conclusion:**
+
+
+Based on the analysis of the daily activity data, it is evident that most users do not reach the recommended 10,000 steps per day. Additionally, it appears that Sunday, Monday, and Friday tend to have lower average daily step counts compared to other days of the week. 
+
+These insights suggest that there may be an opportunity for Bellabeat to promote their products as a way to help users reach their daily step goal, especially on days with lower activity levels. This could potentially lead to increased engagement with their products and improve the overall health outcomes of their customers.
+
+## 5 Act
+
+
+#### 5.1 Overall conclusion
+Through my analysis, I have identified several areas where Bellabeat could focus their efforts to improve the usefulness of their devices in promoting better health. These include promoting regular movement throughout the day, providing more opportunities for users to track and measure their weight, and finding ways to encourage users to take more daily steps.
+
+
+
+#### 5.2 Recommendations
+<span style="color: red;">**1. Reduce sedentry minutes through daily competitions.**</span> 
+o encourage users to be more active, I recommend that Bellabeat focus on developing a sense of community within their app by hosting regular competitions and events. For example, a weekly step challenge on Sunday could be held, where users compete to see who can take the most steps or maintain the highest average heart rate over a certain period of time. This could also be targeted at days of the week that have shown to be more sedentary, such as Sunday and Monday, to improve overall weekly activity levels.
+
+<span style="color: red;">**2. Built in fitness plans**</span> 
+Given that the data showed that users are actively interested in becoming healthier, I recommend that Bellabeat develops fitness plans in their app that can be tracked and monitored using the hardware. For example, users could track their progress on a 2k run using the watch, with the statistics being uploaded to the app for tracking. Research has shown that setting a specific timeframe for wellness goals can be a more effective way of achieving them, and this feature would allow users to do so.
+
+<span style="color: red;">**3. Improve how users log weight.**</span> 
+To make it easier for users to track their weight, I recommend that Bellabeat consider partnering with other smart devices such as smart weighing scales. By simplifying the process of weighing oneself and making it more reliable, users will be able to more accurately track their progress and receive tailored recommendations. In combination with a fitness plan, users could also use their weight logs as additional motivation to stay active, as they can see tangible results on their app.
+
+<span style="color: red;">**4. Promote daily sleep**</span> 
+To help users sleep better, I recommend a two-pronged approach. First, if users input their morning alarms through the device, Bellabeat could use push notifications to prompt users to start winding down for bed 8-9 hours before the alarm. Second, research has shown that a consistent sleep routine, as well as reducing caffeine intake 10 hours before sleep, can promote better sleep. Bellabeat could prompt users to meditate or do a simple breathing exercise
+
+
+Overall, the data analyzed in this case study is limited and further data would be needed to make more concrete recommendations. However, my insights provide a valuable starting point for further exploration and have helped identify potential areas for improvement in Bellabeat's marketing strategy. I have considered the needs and goals of all key stakeholders in completing the business task.
+
+If you have any additional recommendations or questions about this case study, please do not hesitate to contact me directly.
+Paul Carmody
