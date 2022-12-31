@@ -1,1 +1,4 @@
-theme: modernist
+theme: jekyll-theme-modernist
+title: My Site
+author: Paul Carmody
+description: A place to show my work
